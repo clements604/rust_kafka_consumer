@@ -75,7 +75,7 @@ fn load_cfg_from_file(mut file: File) -> std::io::Result<HashMap<String, String>
     let mut cfg_map: HashMap<String, String> = HashMap::new();
     if let Some(temp) = cfg_json.as_object() {
         for(key, value) in temp.iter(){
-            debug!("key [{:?}], value [{:?}]", key, value);
+            debug!("key [{:?}], value [{:?}]", key, String::from(value.as_str().unwrap_or("")));
             cfg_map.insert(String::from(key), String::from(value.as_str().unwrap_or("")));
         }
     }
