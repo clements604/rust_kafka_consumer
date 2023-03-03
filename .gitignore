@@ -5,3 +5,4 @@ scratch_pad
 kafka_client/
 Cargo.lock
 **/*.rs.bk
+configuration.json
