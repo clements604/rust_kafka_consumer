@@ -18,13 +18,14 @@ fn main() {
 
     let mut consumer =
     Consumer::from_hosts(vec!(cfg_map["BOOTSTRAP_SERVERS"].to_owned()))
-    .with_topic_partitions("quickstart-events".to_owned(), &[0, 1])
+    .with_topic_partitions(cfg_map["TOPICS"].to_owned(), &[0, 1])
     .with_topic(cfg_map["TOPICS"].to_owned())
         .with_fallback_offset(FetchOffset::Earliest)
-        //.with_group("my-group".to_owned())
+        .with_group(cfg_map["GROUP_ID"].to_owned())
         .with_offset_storage(GroupOffsetStorage::Kafka)
         .create()
         .unwrap();
+    info!("Consumer created");
     loop {
         for ms in consumer.poll().unwrap().iter() {
             for m in ms.messages() {
