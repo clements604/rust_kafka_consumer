@@ -81,7 +81,7 @@ fn create_default_cfg() {
     let data: serde_json::Value = serde_json::from_str(DATA).unwrap();
 
     // Open a file for writing
-    let mut file = match File::create("configuration.json") {
+    let mut file = match File::create(PATH_STR) {
         Ok(file) => file,
         Err(why) => panic!("couldn't create {}: {}", get_config_path().display(), why),
     };
