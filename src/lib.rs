@@ -47,7 +47,7 @@ pub fn load_cfg() -> HashMap<String, String>{
             println!("{:?}", create_default_cfg());
             process::abort()
         },
-        Ok(cfg_file) => {
+        Ok(_) => {
             debug!("load_cfg finish");
             let cfg_map = load_cfg_from_file(get_config_path());
             debug!("load_cfg finish");
@@ -56,10 +56,10 @@ pub fn load_cfg() -> HashMap<String, String>{
     };
 }
 
-fn check_cfg_file(PATH: &Path) -> Result<String>  {
+fn check_cfg_file(path: &Path) -> Result<String>  {
     debug!("check_cfg_file start");
     // Check if configuration file is in the same directory as the .jar file, if not create the file
-    match metadata(PATH) {
+    match metadata(path) {
         Ok(..) => {
             debug!("Configuration file exists, using existing file");
             debug!("check_cfg_file finish");
@@ -87,7 +87,10 @@ fn create_default_cfg() {
     };
 
     // Write the JSON string to the file
-    file.write_all(data.to_string().as_bytes());
+    match file.write_all(data.to_string().as_bytes()) {
+        Ok(result) => result,
+        Err(why) => error!("{}", why),
+    };
     debug!("create_default_cfg finish");
 }
 
@@ -104,7 +107,7 @@ fn load_cfg_from_file(path: &Path) -> HashMap<String, String>{
         },
     };
     let json_result: Result<Value, > = serde_json::from_str(&file_contents);
-    let mut cfg_json: Value = match json_result{
+    let cfg_json: Value = match json_result{
         Ok(json_val) => json_val,
         Err(why) => {
             error!("{}", why);
