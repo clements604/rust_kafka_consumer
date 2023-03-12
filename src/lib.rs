@@ -24,7 +24,7 @@ const DATA: &str = r#"{
     "TRUSTSTORE_LOCATION": "ssl.truststore.location=kafka.truststore.jks",
     "TRUSTSTORE_PASSWORD": "ssl.truststore.password=kafka@1234",
     "PRIVATE_KEY_PASSWORD": "ssl.key.password=kafka@1234",
-    "BOOTSTRAP_SERVERS": "bootstrap.servers=bootstrap_server:9092",
+    "BOOTSTRAP_SERVERS": "localhost:9092",
     "AUTOCOMMIT_FLAG": "enable.auto.commit=false",
     "GROUP_ID": "",
     "OFFSET_RESET_FLAG": "auto.offset.reset=earliest",
@@ -120,4 +120,39 @@ fn load_cfg_from_file(path: &Path) -> HashMap<String, String>{
     }
     debug!("load_cfg_from_file finish");
     return cfg_map;
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_load_default() {
+        // !!! WARNING !!!
+        // Running this test will override current configuration.json file
+        create_default_cfg();
+        let file_check: String = match check_cfg_file(get_config_path()) {
+            Ok(result) => {
+                result
+            },
+            Err(why) => {
+                why.to_string()
+            }
+        };
+        assert_eq!(file_check, "");
+
+        let config_map = load_cfg_from_file(get_config_path());
+        assert!(config_map.len() != 0);
+        assert_eq!(config_map["SSL_ENABLED"], "ssl.enabled=true");
+    }
+
+    #[test]
+    fn test_load_existing() {
+        let config_map = load_cfg_from_file(get_config_path());
+        assert!(config_map.len() != 0);
+        assert_eq!(config_map["SSL_ENABLED"], "ssl.enabled=true");
+    }
+
 }

@@ -1,8 +1,9 @@
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage};
 use log::{info, warn, error, debug, trace, LevelFilter};
 use env_logger::Builder;
-use my_config::{load_cfg};
 use std::collections::HashMap;
+
+mod lib;
 
 fn main() {
 
@@ -12,7 +13,7 @@ fn main() {
         .filter_level(LevelFilter::Debug)
         .init();
 
-        cfg_map = my_config::load_cfg();
+        cfg_map = lib::load_cfg();
 
         debug!("{:?}", cfg_map["BOOTSTRAP_SERVERS"]);
 
@@ -36,3 +37,4 @@ fn main() {
         consumer.commit_consumed().unwrap();
     }
 }
+
