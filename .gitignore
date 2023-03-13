@@ -5,3 +5,6 @@ scratch_pad
 kafka_client/
 Cargo.lock
 **/*.rs.bk
+configuration.json
+start_local_kafka.sh
+nohup.out
