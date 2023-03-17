@@ -6,6 +6,5 @@
 
 ### WIP Features
     - Multiple topics allowed
-    - Output to file
     - Command line arguments
     - with_topic_partitions currently hardcoded to 0,1

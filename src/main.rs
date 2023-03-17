@@ -5,8 +5,10 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::fs::metadata;
+use std::fs::OpenOptions;
 
 mod lib;
+mod utils;
 
 fn main() {
 
@@ -42,7 +44,11 @@ fn main() {
     loop {
         for message_set in consumer.poll().unwrap().iter() {
             for message in message_set.messages() {
-                info!("{:?}", std::str::from_utf8(&message.value).unwrap());
+                let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
+                info!("{:?}", message);
+                message = utils::get_epoch_time() + "\t\t" + &message + "\n";
+                info!("{}", utils::get_epoch_time());
+                write_message_to_file(cfg_map["TOPICS"].to_owned(), message);
             }
             match consumer.consume_messageset(message_set) {
                 Ok(result) => result,
@@ -54,18 +60,26 @@ fn main() {
 
 }
 
-fn write_message_to_file(topic: String, message: String){
+fn write_message_to_file(topic: String, message: String) {
 
-    match metadata(format!("{}.log", topic)) {
-        Ok(..) => { Ok },
-        Err(..) => {
-            match File::create(format!("{}.log", topic)) {
-                Ok(_) => { Ok },
-                Err(..) => {
-                    error!("Can't open file {}.log for writing", topic);
-                    Err
-                }
-            };
-        },
-    };
+    match OpenOptions::new()
+        //.write(true)
+        .append(true)
+        .create(true)
+        .open(format!("{}.log", topic)) {
+            Ok(mut topic_log) => {
+                match topic_log.write_all(message.as_bytes()) {
+                    Ok(result) => result,
+                    Err(why) => error!("{}", why),
+                };
+            },
+            Err(why) => {
+                error!("{}", why);
+            },
+        };
+
+}
+
+fn get_epoch_time() -> String {
+    return String::from("");
 }
