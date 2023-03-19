@@ -5,7 +5,6 @@
 - https://kafka.apache.org/quickstart
 
 ### WIP Features
-- Multiple topics allowed
 - Command line arguments
 - with_topic_partitions currently hardcoded to 0,1
 
