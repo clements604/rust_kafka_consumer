@@ -43,13 +43,11 @@ fn main() {
         }
         consumer.commit_consumed().unwrap();
     }
-
+    
 }
 
 fn write_message_to_file(topic: String, message: String) {
-
     match OpenOptions::new()
-        //.write(true)
         .append(true)
         .create(true)
         .open(format!("{}.log", topic)) {
@@ -63,7 +61,6 @@ fn write_message_to_file(topic: String, message: String) {
                 error!("{}", why);
             },
         };
-
 }
 
 fn get_consumer(cfg_map: &HashMap<String, String>) -> Consumer{
