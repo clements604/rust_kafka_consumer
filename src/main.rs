@@ -34,7 +34,6 @@ fn main() {
                 info!("{:?}", message);
                 let timestamp = utils::get_timestamp();
                 message = timestamp.to_owned() + "\t\t" + &message + "\n";
-                info!("{}", timestamp);
                 write_message_to_file(topic.to_owned(), message);
             }
             match consumer.consume_messageset(message_set) {
