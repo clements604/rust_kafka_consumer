@@ -8,3 +8,4 @@ Cargo.lock
 configuration.json
 start_local_kafka.sh
 nohup.out
+*.log
