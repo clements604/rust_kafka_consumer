@@ -33,7 +33,7 @@ const DATA: &str = r#"{
     "MAX_POLL_RECORDS": "max.poll.records=100"
 }"#;
 
-const PATH_STR: &str = "configuration.json";
+pub const PATH_STR: &str = "configuration.json";
 
 fn get_config_path() -> &'static Path {
     Path::new(PATH_STR)

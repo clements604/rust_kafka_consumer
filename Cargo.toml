@@ -17,6 +17,7 @@ serde_json = "1.0"
 log = "0.4.17"
 fs = "0.0.5"
 chrono = "0.4.24" # Utils
+clap = { version = "3.1.6", features = ["derive"] } #CLI Parser
 
 [lib]
 name = "test_kafka_consumer"

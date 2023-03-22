@@ -13,13 +13,99 @@ use kafka::error::{Error};
 mod lib;
 mod utils;
 
+mod args;
+use args::AppArgs;
+use clap::{Parser, App, Arg};
+
 fn main() {
+
+    //let args = AppArgs::parse();
 
     Builder::new()
         .filter_level(LevelFilter::Debug)
         .init();
 
-    let cfg_map = lib::load_cfg();
+    let matches = App::new("test")
+        .arg(
+            Arg::with_name("file_output")
+            .short('f')
+            .takes_value(false)
+            .max_occurrences(1)
+            .help("Flag to output to files based on topic names rather than stdout")
+        )
+        .arg(
+            Arg::with_name("auto_commt")
+            .short('c')
+            .long("autocommit")
+            .takes_value(false)
+            .max_occurrences(1)
+            .help("auto commit flag, overrides configuration file")
+        )
+        .arg(
+            Arg::with_name("properties_file")
+            .short('p')
+            .long("properties")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .default_value(lib::PATH_STR)
+            .help("Specify properties file path, overrides default in CWD")
+        )
+        .arg(
+            Arg::with_name("message_key")
+            .short('k')
+            .long("key")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .help("Specify a key to search with")
+        )
+        .arg(
+            Arg::with_name("topics")
+            .short('t')
+            .long("topics")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .help("Specify topics to subscribe to, overrides configuration file, comma seperated")
+        )
+        .arg(
+            Arg::with_name("group_id")
+            .short('g')
+            .long("group")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .help("Specify group ID, overrides configuration file")
+        )
+        .arg(
+            Arg::with_name("bootstrap_servers")
+            .short('b')
+            .long("bootstrap")
+            .takes_value(true)
+            .max_occurrences(1)
+            .forbid_empty_values(true)
+            .help("Specify bootstrap servers, overrides configuration file")
+        )
+        .get_matches();
+    
+    /*let cfg_map = lib::load_cfg(
+        match matches.value_of("properties_file"){
+            Some(val) => val,
+            None => "abc123"
+        }
+    );*/
+
+    let mut cfg_map: HashMap<String, String> = match matches.value_of("properties_file"){
+        Some(path) => {
+            debug!("Custom path [{}] provided for configuration file", path);
+            lib::load_cfg()//TODO make path dynamic,
+            //lib::load_cfg(path)//TODO make path dynamic,
+        },
+        None => {
+            lib::load_cfg()
+        }
+    };
 
     debug!("{:?}", cfg_map["BOOTSTRAP_SERVERS"]);
 
@@ -75,7 +161,7 @@ fn get_consumer(cfg_map: &HashMap<String, String>) -> Consumer{
     debug!("{:?}", topics);
 
     for topic in topics {
-        info!("{}", topic);
+        debug!("{}", topic);
         consumer = consumer.with_topic(topic.to_owned())
         //.with_topic_partitions(topic.to_owned(), &[0, 1]);
     }
