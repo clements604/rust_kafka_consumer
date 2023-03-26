@@ -11,7 +11,7 @@ use serde_json::Value;
 use std::fs::metadata;
 
 const DATA: &str = r#"{
-    "SSL_ENABLED": "ssl.enabled=true",
+    "SSL_ENABLED": false,
     "IDENTIFICATION_ALGORITHIM": "ssl.endpoint.identification.algorithm=",
     "KEYMANAGER_ALGORITHIM": "ssl.keymanager.algorithm=SunX509",
     "KEYSTORE_TYPE": "ssl.keystore.type=JKS",

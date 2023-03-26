@@ -20,6 +20,7 @@ use clap::{Parser, App, Arg};
 fn main() {
 
     //let args = AppArgs::parse();
+    let mut commit_consumed: bool = false;
 
     Builder::new()
         .filter_level(LevelFilter::Debug)
@@ -96,6 +97,9 @@ fn main() {
         }
     );*/
 
+    let file_output: bool = matches.is_present("file_output");
+    debug!("file_output [{}]", file_output);
+
     let mut cfg_map: HashMap<String, String> = match matches.value_of("properties_file"){
         Some(path) => {
             debug!("Custom path [{}] provided for configuration file", path);
@@ -103,11 +107,20 @@ fn main() {
             //lib::load_cfg(path)//TODO make path dynamic,
         },
         None => {
+            debug!("using default path of ./configuration.properties");
             lib::load_cfg()
         }
     };
 
-    debug!("{:?}", cfg_map["BOOTSTRAP_SERVERS"]);
+    if matches.is_present("bootstrap_servers") {
+        if let Some(bootstrap_servers) = matches.value_of("bootstrap_servers"){
+            cfg_map.insert(String::from("BOOTSTRAP_SERVERS"), String::from(bootstrap_servers));
+        }     
+    }
+
+    if matches.is_present("auto_commt") {
+        commit_consumed = true;
+    }
 
     let mut consumer = get_consumer(&cfg_map);
     debug!("Consumer created");
@@ -117,17 +130,25 @@ fn main() {
             let topic = message_set.topic();
             for message in message_set.messages() {
                 let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
-                info!("{:?}", message);
+                //debug!("{:?}", message);
                 let timestamp = utils::get_timestamp();
-                message = timestamp.to_owned() + "\t\t" + &message + "\n";
-                write_message_to_file(topic.to_owned(), message);
+                message = timestamp.to_owned() + "\t\t" + &message;
+                if file_output {
+                    message = message + "\n";
+                    write_message_to_file(topic.to_owned(), message);
+                }
+                else {
+                    info!("{}", message);
+                }
             }
             match consumer.consume_messageset(message_set) {
                 Ok(result) => result,
                 Err(why) => error!("{}", why)
             };
         }
-        consumer.commit_consumed().unwrap();
+        if commit_consumed {
+            consumer.commit_consumed().unwrap();
+        }
     }
     
 }
