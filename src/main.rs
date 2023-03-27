@@ -21,6 +21,7 @@ fn main() {
 
     //let args = AppArgs::parse();
     let mut commit_consumed: bool = false;
+    let mut message_key: String = String::from("");
 
     Builder::new()
         .filter_level(LevelFilter::Debug)
@@ -89,13 +90,6 @@ fn main() {
             .help("Specify bootstrap servers, overrides configuration file")
         )
         .get_matches();
-    
-    /*let cfg_map = lib::load_cfg(
-        match matches.value_of("properties_file"){
-            Some(val) => val,
-            None => "abc123"
-        }
-    );*/
 
     let file_output: bool = matches.is_present("file_output");
     debug!("file_output [{}]", file_output);
@@ -122,6 +116,16 @@ fn main() {
         commit_consumed = true;
     }
 
+    if matches.is_present("message_key") {
+        message_key = String::from(matches.value_of("message_key").unwrap_or(""));
+    }
+
+    if matches.is_present("group_id") {
+        if let Some(group_id) = matches.value_of("group_id"){
+            cfg_map.insert(String::from("GROUP_ID"), String::from(group_id));
+        }
+    }
+
     let mut consumer = get_consumer(&cfg_map);
     debug!("Consumer created");
 
@@ -129,16 +133,18 @@ fn main() {
         for message_set in consumer.poll().unwrap().iter() {
             let topic = message_set.topic();
             for message in message_set.messages() {
-                let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
-                //debug!("{:?}", message);
-                let timestamp = utils::get_timestamp();
-                message = timestamp.to_owned() + "\t\t" + &message;
-                if file_output {
-                    message = message + "\n";
-                    write_message_to_file(topic.to_owned(), message);
-                }
-                else {
-                    info!("{}", message);
+                if std::str::from_utf8(&message.key).unwrap() == &message_key || &message_key == "" {
+                    let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
+                    //debug!("{:?}", message);
+                    let timestamp = utils::get_timestamp();
+                    message = timestamp.to_owned() + "\t\t" + &message;
+                    if file_output {
+                        message = message + "\n";
+                        write_message_to_file(topic.to_owned(), message);
+                    }
+                    else {
+                        info!("{}", message);
+                    }
                 }
             }
             match consumer.consume_messageset(message_set) {
