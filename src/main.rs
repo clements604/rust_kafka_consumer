@@ -1,26 +1,18 @@
-use kafka::consumer;
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage};
-use log::{info, warn, error, debug, trace, LevelFilter};
+use log::{info, error, debug, LevelFilter};
 use env_logger::Builder;
-use std::collections::HashMap;
-use std::fs::File;
-use std::hash::Hash;
 use std::io::prelude::*;
-use std::fs::metadata;
 use std::fs::OpenOptions;
-use kafka::error::{Error};
 use serde_json::Value;
 
 mod lib;
 mod utils;
 
 mod args;
-use args::AppArgs;
-use clap::{Parser, App, Arg};
+use clap::{App, Arg};
 
 fn main() {
 
-    //let args = AppArgs::parse();
     let mut commit_consumed: bool = false;
     let mut message_key: String = String::from("");
 
@@ -115,6 +107,9 @@ fn main() {
     if matches.is_present("auto_commt") {
         commit_consumed = true;
     }
+    else {
+        commit_consumed = cfg_map["AUTOCOMMIT_FLAG"].as_bool().unwrap_or(false);
+    }
 
     if matches.is_present("message_key") {
         message_key = String::from(matches.value_of("message_key").unwrap_or(""));
@@ -127,6 +122,7 @@ fn main() {
     }
 
     let mut consumer = get_consumer(&cfg_map);
+
     debug!("Consumer created");
 
     loop {
@@ -135,7 +131,6 @@ fn main() {
             for message in message_set.messages() {
                 if std::str::from_utf8(&message.key).unwrap() == &message_key || &message_key == "" {
                     let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
-                    //debug!("{:?}", message);
                     let timestamp = utils::get_timestamp();
                     message = timestamp.to_owned() + "\t\t" + &message;
                     if file_output {
@@ -152,7 +147,7 @@ fn main() {
                 Err(why) => error!("{}", why)
             };
         }
-        if commit_consumed {
+        if commit_consumed && cfg_map["GROUP_ID"].as_str().unwrap_or("") != "" {
             consumer.commit_consumed().unwrap();
         }
     }
@@ -177,12 +172,18 @@ fn write_message_to_file(topic: String, message: String) {
 }
 
 fn get_consumer(cfg_map: &serde_json::Value) -> Consumer{
+
     let bootstrap_servers: Vec<String> = vec!(cfg_map["BOOTSTRAP_SERVERS"].as_str().unwrap_or("").split(",").collect());
+
     let mut consumer = Consumer::from_hosts(bootstrap_servers)
-    //.with_topic_partitions(cfg_map["TOPICS"].to_owned(), &[0, 1])
-    .with_fallback_offset(FetchOffset::Earliest)
     .with_group(cfg_map["GROUP_ID"].to_string().to_owned())
     .with_offset_storage(GroupOffsetStorage::Kafka);
+
+    match cfg_map["OFFSET_RESET_FLAG"].as_str().unwrap_or("") {
+        "earliest" => consumer = consumer.with_fallback_offset(FetchOffset::Earliest),
+        "latest" => consumer = consumer.with_fallback_offset(FetchOffset::Latest),
+        _ => consumer = consumer.with_fallback_offset(FetchOffset::Earliest),
+    };
 
     let topics: Vec<&str> = cfg_map["TOPICS"].as_str().unwrap_or("").split(",").collect();
     debug!("{:?}", topics);
@@ -190,7 +191,6 @@ fn get_consumer(cfg_map: &serde_json::Value) -> Consumer{
     for topic in topics {
         debug!("{}", topic);
         consumer = consumer.with_topic(topic.to_owned())
-        //.with_topic_partitions(topic.to_owned(), &[0, 1]);
     }
 
     match consumer.create() {

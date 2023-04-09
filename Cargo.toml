@@ -18,6 +18,7 @@ log = "0.4.17"
 fs = "0.0.5"
 chrono = "0.4.24" # Utils
 clap = { version = "3.1.6", features = ["derive"] } #CLI Parser
+openssl = "0.10.37"
 
 [lib]
 name = "test_kafka_consumer"
