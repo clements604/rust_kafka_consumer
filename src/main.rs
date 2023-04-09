@@ -50,7 +50,7 @@ fn main() {
             .takes_value(true)
             .forbid_empty_values(true)
             .max_occurrences(1)
-            .default_value(lib::PATH_STR)
+            .default_value(lib::DEFAULT_PATH_STR)
             .help("Specify properties file path, overrides default in CWD")
         )
         .arg(
@@ -97,12 +97,11 @@ fn main() {
     let mut cfg_map: HashMap<String, String> = match matches.value_of("properties_file"){
         Some(path) => {
             debug!("Custom path [{}] provided for configuration file", path);
-            lib::load_cfg()//TODO make path dynamic,
-            //lib::load_cfg(path)//TODO make path dynamic,
+            lib::load_cfg(Some(String::from(path)))
         },
         None => {
             debug!("using default path of ./configuration.properties");
-            lib::load_cfg()
+            lib::load_cfg(None)
         }
     };
 
