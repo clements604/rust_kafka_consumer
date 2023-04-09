@@ -13,15 +13,117 @@ use kafka::error::{Error};
 mod lib;
 mod utils;
 
+mod args;
+use args::AppArgs;
+use clap::{Parser, App, Arg};
+
 fn main() {
+
+    //let args = AppArgs::parse();
+    let mut commit_consumed: bool = false;
+    let mut message_key: String = String::from("");
 
     Builder::new()
         .filter_level(LevelFilter::Debug)
         .init();
 
-    let cfg_map = lib::load_cfg();
+    let matches = App::new("test")
+        .arg(
+            Arg::with_name("file_output")
+            .short('f')
+            .takes_value(false)
+            .max_occurrences(1)
+            .help("Flag to output to files based on topic names rather than stdout")
+        )
+        .arg(
+            Arg::with_name("auto_commt")
+            .short('c')
+            .long("autocommit")
+            .takes_value(false)
+            .max_occurrences(1)
+            .help("auto commit flag, overrides configuration file")
+        )
+        .arg(
+            Arg::with_name("properties_file")
+            .short('p')
+            .long("properties")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .default_value(lib::DEFAULT_PATH_STR)
+            .help("Specify properties file path, overrides default in CWD")
+        )
+        .arg(
+            Arg::with_name("message_key")
+            .short('k')
+            .long("key")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .help("Specify a key to search with")
+        )
+        .arg(
+            Arg::with_name("topics")
+            .short('t')
+            .long("topics")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .help("Specify topics to subscribe to, overrides configuration file, comma seperated")
+        )
+        .arg(
+            Arg::with_name("group_id")
+            .short('g')
+            .long("group")
+            .takes_value(true)
+            .forbid_empty_values(true)
+            .max_occurrences(1)
+            .help("Specify group ID, overrides configuration file")
+        )
+        .arg(
+            Arg::with_name("bootstrap_servers")
+            .short('b')
+            .long("bootstrap")
+            .takes_value(true)
+            .max_occurrences(1)
+            .forbid_empty_values(true)
+            .help("Specify bootstrap servers, overrides configuration file")
+        )
+        .get_matches();
 
-    debug!("{:?}", cfg_map["BOOTSTRAP_SERVERS"]);
+    let file_output: bool = matches.is_present("file_output");
+    debug!("file_output [{}]", file_output);
+
+    let mut cfg_map: HashMap<String, String> = match matches.value_of("properties_file"){
+        Some(path) => {
+            debug!("Custom path [{}] provided for configuration file", path);
+            lib::load_cfg(Some(String::from(path)))
+        },
+        None => {
+            debug!("using default path of ./configuration.properties");
+            lib::load_cfg(None)
+        }
+    };
+
+    if matches.is_present("bootstrap_servers") {
+        if let Some(bootstrap_servers) = matches.value_of("bootstrap_servers"){
+            cfg_map.insert(String::from("BOOTSTRAP_SERVERS"), String::from(bootstrap_servers));
+        }     
+    }
+
+    if matches.is_present("auto_commt") {
+        commit_consumed = true;
+    }
+
+    if matches.is_present("message_key") {
+        message_key = String::from(matches.value_of("message_key").unwrap_or(""));
+    }
+
+    if matches.is_present("group_id") {
+        if let Some(group_id) = matches.value_of("group_id"){
+            cfg_map.insert(String::from("GROUP_ID"), String::from(group_id));
+        }
+    }
 
     let mut consumer = get_consumer(&cfg_map);
     debug!("Consumer created");
@@ -30,18 +132,28 @@ fn main() {
         for message_set in consumer.poll().unwrap().iter() {
             let topic = message_set.topic();
             for message in message_set.messages() {
-                let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
-                info!("{:?}", message);
-                let timestamp = utils::get_timestamp();
-                message = timestamp.to_owned() + "\t\t" + &message + "\n";
-                write_message_to_file(topic.to_owned(), message);
+                if std::str::from_utf8(&message.key).unwrap() == &message_key || &message_key == "" {
+                    let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
+                    //debug!("{:?}", message);
+                    let timestamp = utils::get_timestamp();
+                    message = timestamp.to_owned() + "\t\t" + &message;
+                    if file_output {
+                        message = message + "\n";
+                        write_message_to_file(topic.to_owned(), message);
+                    }
+                    else {
+                        info!("{}", message);
+                    }
+                }
             }
             match consumer.consume_messageset(message_set) {
                 Ok(result) => result,
                 Err(why) => error!("{}", why)
             };
         }
-        consumer.commit_consumed().unwrap();
+        if commit_consumed {
+            consumer.commit_consumed().unwrap();
+        }
     }
     
 }
@@ -75,7 +187,7 @@ fn get_consumer(cfg_map: &HashMap<String, String>) -> Consumer{
     debug!("{:?}", topics);
 
     for topic in topics {
-        info!("{}", topic);
+        debug!("{}", topic);
         consumer = consumer.with_topic(topic.to_owned())
         //.with_topic_partitions(topic.to_owned(), &[0, 1]);
     }

@@ -1,5 +1,5 @@
 use std::fs::{File, read_to_string};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::prelude::*;
 use std::str::FromStr;
 use serde_json::{json, Result};
@@ -11,7 +11,7 @@ use serde_json::Value;
 use std::fs::metadata;
 
 const DATA: &str = r#"{
-    "SSL_ENABLED": "ssl.enabled=true",
+    "SSL_ENABLED": false,
     "IDENTIFICATION_ALGORITHIM": "ssl.endpoint.identification.algorithm=",
     "KEYMANAGER_ALGORITHIM": "ssl.keymanager.algorithm=SunX509",
     "KEYSTORE_TYPE": "ssl.keystore.type=JKS",
@@ -33,15 +33,22 @@ const DATA: &str = r#"{
     "MAX_POLL_RECORDS": "max.poll.records=100"
 }"#;
 
-const PATH_STR: &str = "configuration.json";
+pub const DEFAULT_PATH_STR: &str = "configuration.json";
 
 fn get_config_path() -> &'static Path {
-    Path::new(PATH_STR)
+    Path::new(DEFAULT_PATH_STR)
 }
 
-pub fn load_cfg() -> HashMap<String, String>{
+pub fn load_cfg(file_path: Option<String>) -> HashMap<String, String>{
     debug!("load_cfg start");
-    match check_cfg_file(get_config_path()) {
+    
+    let mut cfg_path = get_config_path();
+
+    if let Some(path_str) = file_path.as_deref(){
+        cfg_path = Path::new(path_str);
+    }
+
+    match check_cfg_file(&cfg_path) {
         Err(why) => {
             error!("Error loading configuration file: {:?}", &why.to_string());
             println!("{:?}", create_default_cfg());
@@ -81,7 +88,7 @@ fn create_default_cfg() {
     let data: serde_json::Value = serde_json::from_str(DATA).unwrap();
 
     // Open a file for writing
-    let mut file = match File::create(PATH_STR) {
+    let mut file = match File::create(DEFAULT_PATH_STR) {
         Ok(file) => file,
         Err(why) => panic!("couldn't create {}: {}", get_config_path().display(), why),
     };
@@ -96,7 +103,7 @@ fn create_default_cfg() {
 
 fn load_cfg_from_file(path: &Path) -> HashMap<String, String>{
     debug!("load_cfg_from_file start");
-    let file_contents: String = match read_to_string(get_config_path()) {
+    let file_contents: String = match read_to_string(path) {
         Ok(contents) => {
             debug!("{}", contents);
             contents
@@ -132,7 +139,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn test_load_default() {
+    fn test_check_cfg_file_default() {
         // !!! WARNING !!!
         // Running this test will override current configuration.json file
         create_default_cfg();
@@ -152,10 +159,24 @@ mod tests {
     }
 
     #[test]
-    fn test_load_existing() {
-        let config_map = load_cfg_from_file(get_config_path());
+    fn test_load_cfg_default() {
+        let config: HashMap<String, String> = load_cfg(None);
+        assert_ne!(config.len(), 0);
+    }
+
+    #[test]
+    fn test_get_config_path_existing() {
+        let config_map: HashMap<String, String> = load_cfg_from_file(get_config_path());
         assert!(config_map.len() != 0);
-        assert_eq!(config_map["SSL_ENABLED"], "ssl.enabled=true");
+        println!("###########\t{}", config_map["SSL_ENABLED"]);
+        assert_eq!(config_map["SSL_ENABLED"], "false");
+    }
+
+    #[test]
+    fn test_load_cfg_existing() {
+        let config_map: HashMap<String, String> = load_cfg(Some(String::from(DEFAULT_PATH_STR)));
+        assert!(config_map.len() != 0);
+        assert_eq!(config_map["SSL_ENABLED"], "false");
     }
 
 }
