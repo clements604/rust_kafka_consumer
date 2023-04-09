@@ -9,6 +9,7 @@ use std::io::prelude::*;
 use std::fs::metadata;
 use std::fs::OpenOptions;
 use kafka::error::{Error};
+use serde_json::Value;
 
 mod lib;
 mod utils;
@@ -94,7 +95,7 @@ fn main() {
     let file_output: bool = matches.is_present("file_output");
     debug!("file_output [{}]", file_output);
 
-    let mut cfg_map: HashMap<String, String> = match matches.value_of("properties_file"){
+    let mut cfg_map: serde_json::Value = match matches.value_of("properties_file"){
         Some(path) => {
             debug!("Custom path [{}] provided for configuration file", path);
             lib::load_cfg(Some(String::from(path)))
@@ -107,7 +108,7 @@ fn main() {
 
     if matches.is_present("bootstrap_servers") {
         if let Some(bootstrap_servers) = matches.value_of("bootstrap_servers"){
-            cfg_map.insert(String::from("BOOTSTRAP_SERVERS"), String::from(bootstrap_servers));
+            cfg_map["BOOTSTRAP_SERVERS"] = Value::from(bootstrap_servers);
         }     
     }
 
@@ -121,7 +122,7 @@ fn main() {
 
     if matches.is_present("group_id") {
         if let Some(group_id) = matches.value_of("group_id"){
-            cfg_map.insert(String::from("GROUP_ID"), String::from(group_id));
+            cfg_map["GROUP_ID"] = Value::from(group_id);
         }
     }
 
@@ -175,15 +176,15 @@ fn write_message_to_file(topic: String, message: String) {
         };
 }
 
-fn get_consumer(cfg_map: &HashMap<String, String>) -> Consumer{
-
-    let mut consumer = Consumer::from_hosts(vec!(cfg_map["BOOTSTRAP_SERVERS"].to_owned()))
+fn get_consumer(cfg_map: &serde_json::Value) -> Consumer{
+    let bootstrap_servers: Vec<String> = vec!(cfg_map["BOOTSTRAP_SERVERS"].as_str().unwrap_or("").split(",").collect());
+    let mut consumer = Consumer::from_hosts(bootstrap_servers)
     //.with_topic_partitions(cfg_map["TOPICS"].to_owned(), &[0, 1])
     .with_fallback_offset(FetchOffset::Earliest)
-    .with_group(cfg_map["GROUP_ID"].to_owned())
+    .with_group(cfg_map["GROUP_ID"].to_string().to_owned())
     .with_offset_storage(GroupOffsetStorage::Kafka);
 
-    let topics: Vec<&str> = cfg_map["TOPICS"].split(",").collect();
+    let topics: Vec<&str> = cfg_map["TOPICS"].as_str().unwrap_or("").split(",").collect();
     debug!("{:?}", topics);
 
     for topic in topics {
