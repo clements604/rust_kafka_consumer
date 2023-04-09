@@ -1,4 +1,4 @@
-use std::fs::{File, read_to_string};
+use std::fs::{File, read_to_string, remove_file};
 use std::path::{Path, PathBuf};
 use std::io::prelude::*;
 use std::str::FromStr;
@@ -39,7 +39,7 @@ fn get_config_path() -> &'static Path {
     Path::new(DEFAULT_PATH_STR)
 }
 
-pub fn load_cfg(file_path: Option<String>) -> HashMap<String, String>{
+pub fn load_cfg(file_path: Option<String>) -> serde_json::Value{
     debug!("load_cfg start");
     
     let mut cfg_path = get_config_path();
@@ -48,10 +48,10 @@ pub fn load_cfg(file_path: Option<String>) -> HashMap<String, String>{
         cfg_path = Path::new(path_str);
     }
 
-    match check_cfg_file(&cfg_path) {
+    match check_create_file(&cfg_path) {
         Err(why) => {
             error!("Error loading configuration file: {:?}", &why.to_string());
-            println!("{:?}", create_default_cfg());
+            //println!("{:?}", create_default_cfg());
             process::abort()
         },
         Ok(_) => {
@@ -63,9 +63,27 @@ pub fn load_cfg(file_path: Option<String>) -> HashMap<String, String>{
     };
 }
 
-fn check_cfg_file(path: &Path) -> Result<String>  {
+pub fn check_create_file(path: &Path) -> std::io::Result<()> {
+    /*
+     *  Checks for config file at provided path, if none exists create default at that path, 
+     */
+    debug!("check_create_file start");
+    match metadata(path) {
+        Ok(..) => {
+            debug!("Configuration file exists, using existing file");
+            debug!("check_cfg_file finish");
+            Ok(())
+        },
+        Err(why) => {
+            debug!("{}", why);
+            debug!("Configuration file does NOT exist, creating default at provided path.");
+            create_default_cfg(path.to_str().unwrap().to_string())
+        }
+    }
+}
+
+/*fn check_cfg_file(path: &Path) -> Result<String>  {
     debug!("check_cfg_file start");
-    // Check if configuration file is in the same directory as the .jar file, if not create the file
     match metadata(path) {
         Ok(..) => {
             debug!("Configuration file exists, using existing file");
@@ -74,34 +92,64 @@ fn check_cfg_file(path: &Path) -> Result<String>  {
         },
         Err(..) => {
             info!("Configuration file does NOT exist, creating default.");
-            create_default_cfg();
+            create_default_cfg(String::from(DEFAULT_PATH_STR));
             debug!("check_cfg_file finish");
             Ok(String::from("Configuration file does NOT exist, creating default."))
         }
     }
-}
+}*/
 
-fn create_default_cfg() {
+fn create_default_cfg(path: String) -> std::io::Result<()> {
     debug!("create_default_cfg start");
-    // Serialize the data as a JSON string
-    //println!("{:?}", DATA);
+
     let data: serde_json::Value = serde_json::from_str(DATA).unwrap();
-
-    // Open a file for writing
-    let mut file = match File::create(DEFAULT_PATH_STR) {
-        Ok(file) => file,
-        Err(why) => panic!("couldn't create {}: {}", get_config_path().display(), why),
+    
+    let mut file = match File::create(path) {
+        Ok(mut file) => {
+            match file.write_all(data.to_string().as_bytes()) {
+                Ok(..) => {
+                    debug!("create_default_cfg finish");
+                    return Ok(())
+                },
+                Err(why) => {
+                    error!("{}", why);
+                    return Err(why)
+                },
+            };
+        },
+        Err(why) => return Err(why),
     };
-
-    // Write the JSON string to the file
-    match file.write_all(data.to_string().as_bytes()) {
-        Ok(result) => result,
-        Err(why) => error!("{}", why),
-    };
-    debug!("create_default_cfg finish");
 }
 
-fn load_cfg_from_file(path: &Path) -> HashMap<String, String>{
+fn load_cfg_from_file(path: &Path) -> serde_json::Value {
+    debug!("load_cfg_from_file start");
+
+    let file_contents: String = match read_to_string(path) {
+        Ok(contents) => {
+            debug!("{}", contents);
+            contents
+        },
+        Err(why) => {
+            error!("{}", why);
+            String::from("")
+        },
+    };
+
+    match serde_json::from_str(&file_contents) {
+        Ok(json_obj) => {
+            debug!("load_cfg_from_file finish");
+            json_obj
+        },
+        Err(why) => {
+            error!("{}", why);
+            debug!("load_cfg_from_file finish");
+            json!("{}")
+        }
+    }
+
+}
+
+/*fn load_cfg_from_file(path: &Path) -> HashMap<String, String>{
     debug!("load_cfg_from_file start");
     let file_contents: String = match read_to_string(path) {
         Ok(contents) => {
@@ -130,7 +178,7 @@ fn load_cfg_from_file(path: &Path) -> HashMap<String, String>{
     }
     debug!("load_cfg_from_file finish");
     return cfg_map;
-}
+}*/
 
 
 #[cfg(test)]
@@ -139,44 +187,40 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn test_check_cfg_file_default() {
+    fn test_check_create_file_create_default() {
         // !!! WARNING !!!
         // Running this test will override current configuration.json file
-        create_default_cfg();
-        let file_check: String = match check_cfg_file(get_config_path()) {
-            Ok(result) => {
-                result
-            },
-            Err(why) => {
-                why.to_string()
-            }
-        };
-        assert_eq!(file_check, "");
-
+        /*  Runs check_create_file with no configuration file present to test file creation */
+        let _ = remove_file(DEFAULT_PATH_STR);
+        assert!(check_create_file(Path::new(DEFAULT_PATH_STR)).is_ok());
         let config_map = load_cfg_from_file(get_config_path());
-        assert!(config_map.len() != 0);
-        assert_eq!(config_map["SSL_ENABLED"], "ssl.enabled=true");
+        assert_eq!(config_map.is_null(), false);
+        assert_eq!(config_map["SSL_ENABLED"], false);
     }
 
     #[test]
-    fn test_load_cfg_default() {
-        let config: HashMap<String, String> = load_cfg(None);
-        assert_ne!(config.len(), 0);
+    fn test_check_create_file_existing() {
+        /*  Runs check_create_file with existing configuration file present */
+        assert!(check_create_file(Path::new(DEFAULT_PATH_STR)).is_ok());
+        let config_map: serde_json::Value = load_cfg(Some(String::from(DEFAULT_PATH_STR)));
+        println!("{:?}", config_map["PRIVATE_KEY_PASSWORD"].as_str());
+        assert_eq!(config_map.is_null(), false);
+        assert_eq!(config_map["SSL_ENABLED"], false);
     }
 
     #[test]
     fn test_get_config_path_existing() {
-        let config_map: HashMap<String, String> = load_cfg_from_file(get_config_path());
-        assert!(config_map.len() != 0);
+        let config_map = load_cfg_from_file(get_config_path());
+        assert_eq!(config_map.is_null(), false);
         println!("###########\t{}", config_map["SSL_ENABLED"]);
-        assert_eq!(config_map["SSL_ENABLED"], "false");
+        assert_eq!(config_map["SSL_ENABLED"], false);
     }
 
     #[test]
     fn test_load_cfg_existing() {
-        let config_map: HashMap<String, String> = load_cfg(Some(String::from(DEFAULT_PATH_STR)));
-        assert!(config_map.len() != 0);
-        assert_eq!(config_map["SSL_ENABLED"], "false");
+        let config_map: serde_json::Value = load_cfg(Some(String::from(DEFAULT_PATH_STR)));
+        assert_eq!(config_map.is_null(), false);
+        assert_eq!(config_map["SSL_ENABLED"], false);
     }
 
 }
