@@ -1,7 +1,6 @@
 use std::fs::{File, read_to_string};
 use std::path::{Path};
-use std::io::prelude::*;
-use serde_json::{json};
+use serde_json::{json, Value, to_writer_pretty};
 use log::{error, debug};
 use std::process;
 use std::fs::metadata;
@@ -38,7 +37,6 @@ pub fn load_cfg(file_path: Option<String>) -> serde_json::Value{
         },
         Err(why) => {
             error!("Error loading configuration file: {:?}", &why.to_string());
-            //println!("{:?}", create_default_cfg());
             process::abort()
         },
     };
@@ -69,18 +67,18 @@ fn create_default_cfg(path: String) -> std::io::Result<()> {
     */
     debug!("create_default_cfg start");
 
-    let data: serde_json::Value = serde_json::from_str(DATA).unwrap();
+    let json_value: Value = serde_json::from_str(DATA)?;
     
     match File::create(path) {
-        Ok(mut file) => {
-            match file.write_all(data.to_string().as_bytes()) {
+        Ok(file) => {
+            match to_writer_pretty(file, &json_value) {
                 Ok(..) => {
                     debug!("create_default_cfg finish");
                     return Ok(())
                 },
                 Err(why) => {
                     error!("{}", why);
-                    return Err(why)
+                    return Err(why.into())
                 },
             };
         },
