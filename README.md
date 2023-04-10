@@ -41,4 +41,4 @@
     }
 
 ### Build
-Cargo build --release -target-dir <DIRECTORY>
+Cargo build --release -target-dir DIRECTORY_PATH
