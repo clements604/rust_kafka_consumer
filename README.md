@@ -24,3 +24,21 @@
             Specify properties file path, overrides default in CWD [default: configuration.json]
     -t, --topics <topics>
             Specify topics to subscribe to, overrides configuration file, comma seperated
+
+### Configuration file
+-   If no -p/--properties file path is provided and no configuration.json file exists in the current working directory the consumer
+    will generate a default configuration file named configuration.json in the current working directory.
+-   If -p/--properties file path is provided and no configuration.json file exists in the provided path the consumer
+    will generate a default configuration file named configuration.json in the provided path.
+
+#### Sample configuration.json
+    {
+    "AUTOCOMMIT_FLAG": false,
+    "BOOTSTRAP_SERVERS": "localhost:9092",
+    "GROUP_ID": "",
+    "OFFSET_RESET_FLAG": "earliest",
+    "TOPICS": "quickstart-events"
+    }
+
+### Build
+Cargo build --release -target-dir <DIRECTORY>
