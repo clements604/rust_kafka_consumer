@@ -1,6 +1,10 @@
 [package]
 name = "kafka_consumer"
 version = "1.0.0"
+authors = ["Joshua Clements"]
+license = "GNU GPLv3"
+repository = "https://github.com/clements604/rust_kafka_consumer"
+description = "A simple Kafka consumer for development / debugging purposes"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,3 +18,4 @@ log = "0.4.17"
 fs = "0.0.5"
 chrono = "0.4.24" # Utils
 clap = { version = "3.1.6", features = ["derive"] } #CLI Parser
+openssl = "0.10.50"

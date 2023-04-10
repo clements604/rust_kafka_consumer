@@ -5,8 +5,12 @@ use std::io::prelude::*;
 use std::fs::OpenOptions;
 use serde_json::Value;
 
+use kafka::client::{KafkaClient, SecurityConfig};
+use openssl;
+
 mod config_mgr;
 mod utils;
+mod ssl_helper;
 
 use clap::{App, Arg};
 
@@ -173,6 +177,11 @@ fn write_message_to_file(topic: String, message: String) {
 fn get_consumer(cfg_map: &serde_json::Value) -> Consumer{
 
     let bootstrap_servers: Vec<String> = vec!(cfg_map["BOOTSTRAP_SERVERS"].as_str().unwrap_or("").split(",").collect());
+
+    /*let mut client = KafkaClient::new_secure(
+        bootstrap_servers,
+        SecurityConfig::new()
+    )*/
 
     let mut consumer = Consumer::from_hosts(bootstrap_servers)
     .with_group(cfg_map["GROUP_ID"].to_string().to_owned())
