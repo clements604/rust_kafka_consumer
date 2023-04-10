@@ -3,17 +3,24 @@
 ### Reference:
 - https://docs.rs/kafka/latest/kafka/consumer/index.html
 - https://kafka.apache.org/quickstart
-- https://www.youtube.com/watch?v=fD9ptABVQbI
 
 ### WIP Features
-- Command line arguments, updating to include file path param
-- with_topic_partitions currently hardcoded to 0,1
+- SSL support
 
-### *PLANNED* Command line options
-- File output flag (topic as filename)
-- Properties file name override
-- Message key override
-- Topics to subscribe to (comma seperated)
-- Group ID to use
-- Bootstrap server override
-- Autocommit flag override
+### Command line options
+    -b, --bootstrap <bootstrap_servers>
+            Specify bootstrap servers, overrides configuration file
+    -c, --autocommit
+            auto commit flag, overrides configuration file
+    -f
+            Flag to output to files based on topic names rather than stdout
+    -g, --group <group_id>
+            Specify group ID, overrides configuration file
+    -h, --help
+            Print help information
+    -k, --key <message_key>
+            Specify a key to search with
+    -p, --properties <properties_file>
+            Specify properties file path, overrides default in CWD [default: configuration.json]
+    -t, --topics <topics>
+            Specify topics to subscribe to, overrides configuration file, comma seperated
