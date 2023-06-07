@@ -10,7 +10,9 @@ const DATA: &str = r#"{
     "AUTOCOMMIT_FLAG": false,
     "GROUP_ID": "",
     "OFFSET_RESET_FLAG": "earliest",
-    "TOPICS": "quickstart-events"
+    "TOPICS": "quickstart-events",
+    "MESSAGE_KEY": "",
+    "FILE_OUTPUT": false
 }"#;
 
 pub const DEFAULT_PATH_STR: &str = "configuration.json";
