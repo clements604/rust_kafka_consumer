@@ -1,3 +1,4 @@
+use futures::TryStreamExt;
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage};
 use log::{info, error, debug, LevelFilter};
 use env_logger::Builder;
@@ -5,8 +6,32 @@ use std::io::prelude::*;
 use std::fs::OpenOptions;
 use serde_json::Value;
 
-use kafka::client::{KafkaClient, SecurityConfig};
+//use kafka::client::{KafkaClient, SecurityConfig};
+use kafka::client::{KafkaClient,SecurityConfig};
 use openssl;
+
+use rdkafka::config::ClientConfig;
+use rdkafka::consumer::{ConsumerContext, Rebalance, StreamConsumer};
+use rdkafka::message::Message;
+use rdkafka::util::get_rdkafka_version;
+use rdkafka::consumer::Consumer as RdConsumer;
+use rdkafka::consumer::CommitMode;
+use rdkafka::consumer::DefaultConsumerContext;
+use std::time::Duration;
+
+use futures::stream::StreamExt;
+
+use rdkafka::client::ClientContext;
+use rdkafka::config::{RDKafkaLogLevel};
+use rdkafka::error::KafkaResult;
+use rdkafka::message::{Headers};
+use rdkafka::topic_partition_list::TopicPartitionList;
+use rdkafka::consumer::MessageStream;
+
+use tokio::time::sleep;
+use tokio::runtime::Runtime;
+
+use rdkafka::consumer::BaseConsumer;
 
 mod config_mgr;
 mod utils;
@@ -14,7 +39,8 @@ mod ssl_helper;
 
 use clap::{App, Arg};
 
-fn main() {
+#[tokio::main]
+async fn main() {
 
     let commit_consumed: bool;
     let mut message_key: String = String::from("");
@@ -124,37 +150,82 @@ fn main() {
         }
     }
 
-    let mut consumer = get_consumer(&cfg_map);
+    //let consumer: StreamConsumer<CustomContext> = get_rd_consumer(&cfg_map).await;
+
+    let mut consumer_config = ClientConfig::new();
+    consumer_config.set("bootstrap.servers", "localhost:9092");
+
+
+    let consumer: BaseConsumer = consumer_config
+        .set("group.id", &cfg_map["GROUP_ID"].to_string().to_owned())
+        .set("enable.auto.commit", "false")
+        .set("session.timeout.ms", "6000")
+        .create()
+        .expect("Failed to create Kafka consumer");
+
+    let topics: Vec<&str> = cfg_map["TOPICS"].as_str().unwrap_or("").split(",").collect();
+    consumer.subscribe(&topics).unwrap();
+
+    poll(&consumer).await;
+
+    
+}
+
+async fn poll(consumer: &BaseConsumer) {
+    //let mut consumer = get_consumer(&cfg_map);
+    //let mut consumer: StreamConsumer<CustomContext> = get_rd_consumer(&cfg_map).await();
+    
+    
+    
+
+    //let mut stream: MessageStream<'_, CustomContext> = consumer.start();
 
     debug!("Consumer created");
 
     loop {
-        for message_set in consumer.poll().unwrap().iter() {
-            let topic = message_set.topic();
-            for message in message_set.messages() {
-                if std::str::from_utf8(&message.key).unwrap() == &message_key || &message_key == "" {
-                    let mut message: String = String::from(std::str::from_utf8(&message.value).unwrap());
-                    let timestamp = utils::get_timestamp();
-                    message = timestamp.to_owned() + "\t\t" + &message;
-                    if file_output {
-                        message = message + "\n";
-                        write_message_to_file(topic.to_owned(), message);
-                    }
-                    else {
-                        info!("{}", message);
+        debug!("loop");
+        match consumer.poll(Duration::from_secs(1)) {
+            Some(message) => {
+                for message in message.iter() {
+                    match message.payload() {
+                    Some(content) => {
+                        let content = std::str::from_utf8(content).unwrap();
+                        info!("{:?}", content)
+                    },
+                    None => {
+                        debug!("nothing 2")
                     }
                 }
+                }
+            },
+            None => {
+                debug!("nothing 1")
             }
-            match consumer.consume_messageset(message_set) {
-                Ok(result) => result,
-                Err(why) => error!("{}", why)
-            };
-        }
-        if commit_consumed && cfg_map["GROUP_ID"].as_str().unwrap_or("") != "" {
-            consumer.commit_consumed().unwrap();
         }
     }
-    
+
+    /*loop {
+        match stream.next().await {
+            Some(message) => {
+                println!("Received message: {:?}", &message.unwrap().payload_view::<str>().unwrap());
+                //consumer.commit_message(&message, CommitMode::Async).unwrap();
+            },
+            None => {
+                println!("No message");
+            }
+            /*Some(Ok(message)) => {
+                println!("Received message: {:?}", message.payload_view::<str>().unwrap());
+            },
+            Some(Err(e)) => {
+                eprintln!("Error while receiving message: {:?}", e);
+            },
+            None => {
+                // No message received within the timeout interval.
+            }*/
+        }
+        
+    }*/
+
 }
 
 fn write_message_to_file(topic: String, message: String) {
@@ -177,11 +248,6 @@ fn write_message_to_file(topic: String, message: String) {
 fn get_consumer(cfg_map: &serde_json::Value) -> Consumer{
 
     let bootstrap_servers: Vec<String> = vec!(cfg_map["BOOTSTRAP_SERVERS"].as_str().unwrap_or("").split(",").collect());
-
-    /*let mut client = KafkaClient::new_secure(
-        bootstrap_servers,
-        SecurityConfig::new()
-    )*/
 
     let mut consumer = Consumer::from_hosts(bootstrap_servers)
     .with_group(cfg_map["GROUP_ID"].to_string().to_owned())
@@ -209,4 +275,39 @@ fn get_consumer(cfg_map: &serde_json::Value) -> Consumer{
         }
     }
 
+}
+
+struct CustomContext;
+impl rdkafka::client::ClientContext for CustomContext {}
+impl ConsumerContext for CustomContext {
+    fn pre_rebalance(&self, rebalance: &Rebalance) {
+        println!("Pre rebalance: {:?}", rebalance);
+    }
+
+    fn post_rebalance(&self, rebalance: &Rebalance) {
+        println!("Post rebalance: {:?}", rebalance);
+    }
+}
+
+async fn get_rd_consumer(cfg_map: &serde_json::Value) -> StreamConsumer<CustomContext> {
+
+    let context = CustomContext;
+
+    let bootstrap_servers: String = String::from("");
+    let topics: Vec<&str> = cfg_map["TOPICS"].as_str().unwrap_or("").split(",").collect();
+
+    let consumer: StreamConsumer<CustomContext> = ClientConfig::new()
+        .set("group.id", &cfg_map["GROUP_ID"].to_string().to_owned())
+        .set("bootstrap.servers", &bootstrap_servers)
+        .set("enable.auto.commit", "false")
+        .set("session.timeout.ms", "6000")
+        //.set("topics", "quickstart-events")
+        .create_with_context(CustomContext)
+        .expect("Consumer creation failed");
+
+    consumer
+        .subscribe(&["my-topic"])
+        .expect("Could not subscribe to topics");
+   
+    consumer
 }
