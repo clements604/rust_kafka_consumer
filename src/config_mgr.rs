@@ -30,10 +30,11 @@ pub fn load_cfg(file_path: Option<String>) -> serde_json::Value{
         cfg_path = Path::new(path_str);
     }
 
+    debug!("cfg_path [{:?}]", &cfg_path);
+
     match check_create_file(&cfg_path) {
         Ok(_) => {
-            debug!("load_cfg finish");
-            let cfg_map = load_cfg_from_file(Path::new(DEFAULT_PATH_STR));
+            let cfg_map = load_cfg_from_file(Path::new(cfg_path));
             debug!("load_cfg finish");
             return cfg_map;
         },
@@ -52,11 +53,11 @@ pub fn check_create_file(path: &Path) -> std::io::Result<()> {
     match metadata(path) {
         Ok(..) => {
             debug!("Configuration file exists, using existing file");
-            debug!("check_cfg_file finish");
+            debug!("check_create_file finish");
             Ok(())
         },
         Err(why) => {
-            debug!("{}", why);
+            error!("{}", why);
             debug!("Configuration file does NOT exist, creating default at provided path.");
             create_default_cfg(path.to_str().unwrap().to_string())
         }

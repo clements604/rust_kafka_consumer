@@ -46,7 +46,7 @@ async fn main() {
     let mut message_key: String = String::from("");
 
     Builder::new()
-        .filter_level(LevelFilter::Info)
+        .filter_level(LevelFilter::Debug)
         .init();
 
     let matches = App::new("test")
@@ -128,6 +128,9 @@ async fn main() {
         cfg_map["FILE_OUTPUT"] = serde_json::Value::Bool(true);
         debug!("file_output [true]");
     }
+    else {
+        debug!("{}", cfg_map["FILE_OUTPUT"]);
+    }
 
     if matches.is_present("bootstrap_servers") {
         if let Some(bootstrap_servers) = matches.value_of("bootstrap_servers"){
@@ -163,7 +166,6 @@ async fn main() {
 async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
 
     loop {
-        debug!("loop");
         match consumer.poll(Duration::from_secs(1)) {
             Some(message) => {
                 for message in message.iter() {
@@ -172,7 +174,7 @@ async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
                         match message.payload() {
                             Some(content) => {
                                 let content = std::str::from_utf8(content).unwrap();
-                                info!("{:?}", content);
+                                info!("{}", content);
                                 if cfg_map["FILE_OUTPUT"].as_bool().unwrap_or(false) {
                                     let timestamp = utils::get_timestamp();
                                     let timestamp_msg = timestamp.as_str().to_owned() + "\t\t" + content;
@@ -180,14 +182,14 @@ async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
                                 }
                             },
                             None => {
-                                info!("nothing 2")
+                                debug!("nothing 2")
                             }
                         }
                     }
                     if cfg_map["AUTOCOMMIT_FLAG"].as_bool().unwrap_or(false) {
                         match consumer.commit_message(message, CommitMode::Async) {
                             Ok(_) => {
-                                info!("Message commit complete")
+                                debug!("Message commit complete")
                             },
                             Err(why) => {
                                 error!("{}", why)
@@ -196,20 +198,19 @@ async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
                     }
                 }
             },
-            None => {
-                debug!("nothing 1")
-            }
+            None => {}
         }
     }
 
 }
 
-fn write_message_to_file(topic: String, message: String) {
+fn write_message_to_file(topic: String, mut message: String) {
     match OpenOptions::new()
         .append(true)
         .create(true)
         .open(format!("{}.log", topic)) {
             Ok(mut topic_log) => {
+                message = message + "\n";
                 match topic_log.write_all(message.as_bytes()) {
                     Ok(result) => result,
                     Err(why) => error!("{}", why),
