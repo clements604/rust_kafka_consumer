@@ -1,49 +1,24 @@
-use futures::TryStreamExt;
-use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage};
-use log::{info, error, debug, LevelFilter};
 use env_logger::Builder;
 use std::io::prelude::*;
 use std::fs::OpenOptions;
 use serde_json::Value;
-
-//use kafka::client::{KafkaClient, SecurityConfig};
-use kafka::client::{KafkaClient,SecurityConfig};
-use openssl;
-
 use rdkafka::config::ClientConfig;
-use rdkafka::consumer::{ConsumerContext, Rebalance, StreamConsumer};
 use rdkafka::message::Message;
-use rdkafka::util::get_rdkafka_version;
 use rdkafka::consumer::Consumer as RdConsumer;
 use rdkafka::consumer::CommitMode;
-use rdkafka::consumer::DefaultConsumerContext;
 use std::time::Duration;
-
-use futures::stream::StreamExt;
-
-use rdkafka::client::ClientContext;
-use rdkafka::config::{RDKafkaLogLevel};
-use rdkafka::error::KafkaResult;
-use rdkafka::message::{Headers};
-use rdkafka::topic_partition_list::TopicPartitionList;
-use rdkafka::consumer::MessageStream;
-
-use tokio::time::sleep;
-use tokio::runtime::Runtime;
-
 use rdkafka::consumer::BaseConsumer;
+use log::{info, error, debug, LevelFilter};
+use clap::{App, Arg};
 
 mod config_mgr;
 mod utils;
-mod ssl_helper;
-
-use clap::{App, Arg};
+mod constants;
 
 #[tokio::main]
 async fn main() {
 
     let commit_consumed: bool;
-    let mut message_key: String = String::from("");
 
     Builder::new()
         .filter_level(LevelFilter::Debug)
@@ -51,7 +26,7 @@ async fn main() {
 
     let matches = App::new("test")
         .arg(
-            Arg::with_name("file_output")
+            Arg::with_name(constants::CFG_FILE_OUTPUT)
             .short('f')
             .takes_value(false)
             .max_occurrences(1)
@@ -124,12 +99,12 @@ async fn main() {
         }
     };
 
-    if matches.is_present("file_output") {
-        cfg_map["FILE_OUTPUT"] = serde_json::Value::Bool(true);
+    if matches.is_present(constants::CFG_FILE_OUTPUT) {
+        cfg_map[constants::CFG_FILE_OUTPUT] = serde_json::Value::Bool(true);
         debug!("file_output [true]");
     }
     else {
-        debug!("{}", cfg_map["FILE_OUTPUT"]);
+        debug!("{}", cfg_map[constants::CFG_FILE_OUTPUT]);
     }
 
     if matches.is_present("bootstrap_servers") {
@@ -147,7 +122,7 @@ async fn main() {
     cfg_map["AUTOCOMMIT_FLAG"] = serde_json::Value::Bool(commit_consumed);
     
     if matches.is_present("message_key") {
-        message_key = String::from(matches.value_of("message_key").unwrap_or(""));
+        let message_key = String::from(matches.value_of("message_key").unwrap_or(""));
         cfg_map["MESSAGE_KEY"] = serde_json::Value::String(message_key);
     }
 
@@ -156,6 +131,12 @@ async fn main() {
             cfg_map["GROUP_ID"] = Value::from(group_id);
         }
     }
+
+    if matches.is_present("topics") {
+        cfg_map["TOPICS"] = serde_json::Value::String(String::from(matches.value_of("topics").unwrap_or("")));
+    }
+
+    debug!("{}", cfg_map);
 
     let consumer: BaseConsumer = get_rd_consumer(&cfg_map).await;
 
@@ -175,7 +156,7 @@ async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
                             Some(content) => {
                                 let content = std::str::from_utf8(content).unwrap();
                                 info!("{}", content);
-                                if cfg_map["FILE_OUTPUT"].as_bool().unwrap_or(false) {
+                                if cfg_map[constants::CFG_FILE_OUTPUT].as_bool().unwrap_or(false) {
                                     let timestamp = utils::get_timestamp();
                                     let timestamp_msg = timestamp.as_str().to_owned() + "\t\t" + content;
                                     write_message_to_file(String::from(message.topic()), timestamp_msg);
@@ -201,7 +182,6 @@ async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
             None => {}
         }
     }
-
 }
 
 fn write_message_to_file(topic: String, mut message: String) {
@@ -222,41 +202,7 @@ fn write_message_to_file(topic: String, mut message: String) {
         };
 }
 
-/*fn get_consumer(cfg_map: &serde_json::Value) -> BaseConsumer{
-
-    let bootstrap_servers: Vec<String> = vec!(cfg_map["BOOTSTRAP_SERVERS"].as_str().unwrap_or("").split(",").collect());
-
-    let mut consumer = Consumer::from_hosts(bootstrap_servers)
-    .with_group(cfg_map["GROUP_ID"].to_string().to_owned())
-    .with_offset_storage(GroupOffsetStorage::Kafka);
-
-    match cfg_map["OFFSET_RESET_FLAG"].as_str().unwrap_or("") {
-        "earliest" => consumer = consumer.with_fallback_offset(FetchOffset::Earliest),
-        "latest" => consumer = consumer.with_fallback_offset(FetchOffset::Latest),
-        _ => consumer = consumer.with_fallback_offset(FetchOffset::Earliest),
-    };
-
-    let topics: Vec<&str> = cfg_map["TOPICS"].as_str().unwrap_or("").split(",").collect();
-    debug!("{:?}", topics);
-
-    for topic in topics {
-        debug!("{}", topic);
-        consumer = consumer.with_topic(topic.to_owned())
-    }
-
-    match consumer.create() {
-        Ok(consumer) => consumer,
-        Err(error) => {
-            error!("{}", error);
-            panic!("{}", error)
-        }
-    }
-
-}*/
-
 async fn get_rd_consumer(cfg_map: &serde_json::Value) -> BaseConsumer {
-
-    //let bootstrap_servers: Vec<String> = vec!(cfg_map["BOOTSTRAP_SERVERS"].as_str().unwrap_or("").split(",").collect());
 
     let mut consumer_config = ClientConfig::new();
     consumer_config.set("bootstrap.servers", cfg_map["BOOTSTRAP_SERVERS"].as_str().unwrap_or(""));

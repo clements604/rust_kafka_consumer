@@ -1,0 +1,1 @@
+pub const CFG_FILE_OUTPUT: &str = "FILE_OUTPUT";
