@@ -33,11 +33,13 @@
 
 #### Sample configuration.json
     {
-    "AUTOCOMMIT_FLAG": false,
-    "BOOTSTRAP_SERVERS": "localhost:9092",
-    "GROUP_ID": "",
-    "OFFSET_RESET_FLAG": "earliest",
-    "TOPICS": "quickstart-events"
+      "AUTOCOMMIT_FLAG": false,
+      "BOOTSTRAP_SERVERS": "localhost:9092",
+      "GROUP_ID": "group123",
+      "OFFSET_RESET_FLAG": "earliest",
+      "TOPICS": "quickstart-events",
+      "MESSAGE_KEY": "",
+      "FILE_OUTPUT": false
     }
 
 ### Build
