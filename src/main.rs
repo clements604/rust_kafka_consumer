@@ -127,7 +127,7 @@ async fn main() {
 
     if matches.is_present(constants::ARG_GROUPS) {
         if let Some(group_id) = matches.value_of(constants::ARG_GROUPS){
-            cfg_map[constants::ARG_GROUPS] = Value::from(group_id);
+            cfg_map[constants::CFG_GROUP] = Value::from(group_id);
         }
     }
 
@@ -137,7 +137,7 @@ async fn main() {
 
     debug!("{}", cfg_map);
 
-    let consumer: BaseConsumer = get_rd_consumer(&cfg_map).await;
+    let consumer: BaseConsumer = get_rd_consumer(&cfg_map);
 
     poll(&consumer, &cfg_map).await;
 
@@ -201,12 +201,13 @@ fn write_message_to_file(topic: String, mut message: String) {
         };
 }
 
-async fn get_rd_consumer(cfg_map: &serde_json::Value) -> BaseConsumer {
+fn get_rd_consumer(cfg_map: &serde_json::Value) -> BaseConsumer {
 
     let mut consumer_config = ClientConfig::new();
-    consumer_config.set("bootstrap.servers", cfg_map[constants::CFG_BOOTSTRAPS].as_str().unwrap_or(""));
-    consumer_config.set("group.id", &cfg_map[constants::ARG_GROUPS].to_string().to_owned());
-    consumer_config.set("enable.auto.commit", &cfg_map[constants::CFG_AUTOCOMMIT].to_string().to_owned());
+    consumer_config.set("bootstrap.servers", cfg_map[constants::CFG_BOOTSTRAPS].as_str().unwrap_or(constants::DEFAULT_BOOTSTRAPS));
+    consumer_config.set("group.id", &cfg_map[constants::CFG_GROUP].as_str().unwrap_or(""));
+    consumer_config.set("enable.auto.commit", &cfg_map[constants::CFG_AUTOCOMMIT].as_str().unwrap_or(constants::DEFAULT_AUTOCOMMIT));
+    consumer_config.set("auto.offset.reset", &cfg_map[constants::CFG_OFFSET].as_str().unwrap_or(constants::DEFAULT_OFFSET_TYPE));
     consumer_config.set("session.timeout.ms", constants::CONNECTION_TIMEOUT_MS);
 
     let consumer: BaseConsumer = consumer_config

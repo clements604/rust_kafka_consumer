@@ -6,14 +6,14 @@ use std::process;
 use std::fs::metadata;
 
 const DATA: &str = r#"{
-    "BOOTSTRAP_SERVERS": "localhost:9092",
     "AUTOCOMMIT_FLAG": false,
-    "GROUP_ID": "",
-    "OFFSET_RESET_FLAG": "earliest",
+    "BOOTSTRAP_SERVERS": "localhost:9092",
+    "GROUP_ID": "test_group",
+    "OFFSET": "earliest",
     "TOPICS": "quickstart-events",
     "MESSAGE_KEY": "",
     "FILE_OUTPUT": false
-}"#;
+  }"#;
 
 pub const DEFAULT_PATH_STR: &str = "configuration.json";
 
