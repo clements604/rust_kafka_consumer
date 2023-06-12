@@ -1,0 +1,14 @@
+pub const CFG_FILE_OUTPUT: &str = "FILE_OUTPUT";
+pub const CFG_BOOTSTRAPS: &str = "BOOTSTRAP_SERVERS";
+pub const CFG_AUTOCOMMIT: &str = "AUTOCOMMIT_FLAG";
+pub const CFG_MESSAGE_KEY: &str = "MESSAGE_KEY";
+pub const CFG_TOPICS: &str = "TOPICS";
+pub const ARG_FILE_OUTPUT: &str = "file_output";
+pub const ARG_AUTOCOMMIT: &str = "auto_commt";
+pub const ARG_PROPERTIES: &str = "properties_file";
+pub const ARG_MESSAGE_KEY: &str = "message_key";
+pub const ARG_TOPICS: &str = "topics";
+pub const ARG_GROUPS: &str = "group_id";
+pub const ARG_BOOTSTRAPS: &str = "bootstrap_servers";
+pub const POLL_DUR_SECS: u64 = 1;
+pub const CONNECTION_TIMEOUT_MS: &str = "6000";
