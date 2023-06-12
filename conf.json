@@ -1,9 +1,0 @@
-{
-  "AUTOCOMMIT_FLAG": true,
-  "BOOTSTRAP_SERVERS": "localhost:9092",
-  "GROUP_ID": "",
-  "OFFSET_RESET_FLAG": "earliest",
-  "TOPICS": "quickstart-events",
-  "MESSAGE_KEY": "",
-  "FILE_OUTPUT": true
-}
