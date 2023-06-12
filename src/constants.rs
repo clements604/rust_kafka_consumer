@@ -11,3 +11,4 @@ pub const ARG_TOPICS: &str = "topics";
 pub const ARG_GROUPS: &str = "group_id";
 pub const ARG_BOOTSTRAPS: &str = "bootstrap_servers";
 pub const POLL_DUR_SECS: u64 = 1;
+pub const CONNECTION_TIMEOUT_MS: &str = "6000";

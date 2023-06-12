@@ -1,19 +1,18 @@
-use env_logger::Builder;
-use std::io::prelude::*;
+use std::io::Write;
 use std::fs::OpenOptions;
+use std::time::Duration;
+use env_logger::Builder;
 use serde_json::Value;
 use rdkafka::config::ClientConfig;
 use rdkafka::message::Message;
 use rdkafka::consumer::Consumer as RdConsumer;
-use rdkafka::consumer::CommitMode;
-use std::time::Duration;
-use rdkafka::consumer::BaseConsumer;
+use rdkafka::consumer::{BaseConsumer, CommitMode};
 use log::{info, error, debug, LevelFilter};
 use clap::{App, Arg};
 
+mod constants;
 mod config_mgr;
 mod utils;
-mod constants;
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +23,7 @@ async fn main() {
         .filter_level(LevelFilter::Debug)
         .init();
 
-    let matches = App::new("test")
+    let matches = App::new("kafka_consumer")
         .arg(
             Arg::with_name(constants::ARG_FILE_OUTPUT)
             .short('f')
@@ -101,7 +100,7 @@ async fn main() {
 
     if matches.is_present(constants::ARG_FILE_OUTPUT) {
         cfg_map[constants::CFG_FILE_OUTPUT] = serde_json::Value::Bool(true);
-        debug!("file_output [true]");
+        debug!("file_output enabled");
     }
     else {
         debug!("{}", cfg_map[constants::CFG_FILE_OUTPUT]);
@@ -162,9 +161,7 @@ async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
                                     write_message_to_file(String::from(message.topic()), timestamp_msg);
                                 }
                             },
-                            None => {
-                                debug!("nothing 2")
-                            }
+                            None => {}
                         }
                     }
                     if cfg_map[constants::CFG_AUTOCOMMIT].as_bool().unwrap_or(false) {
@@ -179,7 +176,9 @@ async fn poll(consumer: &BaseConsumer, cfg_map: &serde_json::Value) {
                     }
                 }
             },
-            None => {}
+            None => {
+                std::process::exit(1)
+            }
         }
     }
 }
@@ -208,7 +207,7 @@ async fn get_rd_consumer(cfg_map: &serde_json::Value) -> BaseConsumer {
     consumer_config.set("bootstrap.servers", cfg_map[constants::CFG_BOOTSTRAPS].as_str().unwrap_or(""));
     consumer_config.set("group.id", &cfg_map[constants::ARG_GROUPS].to_string().to_owned());
     consumer_config.set("enable.auto.commit", &cfg_map[constants::CFG_AUTOCOMMIT].to_string().to_owned());
-    consumer_config.set("session.timeout.ms", "6000");
+    consumer_config.set("session.timeout.ms", constants::CONNECTION_TIMEOUT_MS);
 
     let consumer: BaseConsumer = consumer_config
         .create()
