@@ -12,7 +12,14 @@ const DATA: &str = r#"{
     "OFFSET": "earliest",
     "TOPICS": "quickstart-events",
     "MESSAGE_KEY": "",
-    "FILE_OUTPUT": false
+    "FILE_OUTPUT": false,
+    "SSL_ENABLED": false,
+    "SSL_ENABLED": false,
+    "SSL_SECURITY_PROTOCOL": "ssl",
+    "SSL_CA_LOCATION": "",
+    "SSL_CERT_LOCATION": "",
+    "SSL_KEY_LOCATION": "",
+    "SSL_KEY_PASSWD": ""
   }"#;
 
 pub const DEFAULT_PATH_STR: &str = "configuration.json";

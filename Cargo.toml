@@ -20,7 +20,7 @@ chrono = "0.4.24" # Utils
 clap = { version = "3.1.6", features = ["derive"] } #CLI Parser
 openssl = "0.10.50"
 
-rdkafka = "0.24.0"
+rdkafka = { version = "0.24.0", features = ["cmake-build", "ssl"] }
 futures = "0.3.0"
 
 tokio = { version = "1.18", features = ["full"] }
