@@ -1,24 +1,23 @@
-use clap::{App, Arg};
 use env_logger::Builder;
-use log::{debug, error, info, LevelFilter};
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::Consumer as RdConsumer;
-use rdkafka::consumer::{BaseConsumer, CommitMode, ConsumerContext, Rebalance};
 use rdkafka::message::Message;
 use serde_json::Value;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::time::Duration;
-
 use rdkafka::ClientContext;
-use rdkafka::error::KafkaResult;
 use rdkafka::topic_partition_list::TopicPartitionList;
-use rdkafka::config::FromClientConfigAndContext;
-use rdkafka::error::KafkaError;
+use clap::{App, Arg};
+use log::{debug, error, info, LevelFilter};
+use rdkafka::error::{KafkaResult, KafkaError};
+use rdkafka::consumer::{BaseConsumer, CommitMode, ConsumerContext, Rebalance};
 
 mod config_mgr;
 mod constants;
 mod utils;
+
+struct CustomContext;
 
 #[tokio::main]
 async fn main() {
@@ -188,8 +187,8 @@ async fn poll(consumer: &BaseConsumer<CustomContext>, cfg_map: &serde_json::Valu
                     }
                 }
             }
-            Some(Err(_)) => {
-                break
+            Some(Err(why)) => {
+                error!("{}", why)
             },
             None => {}
         }
@@ -258,25 +257,24 @@ fn get_rd_consumer(cfg_map: &serde_json::Value) -> BaseConsumer<CustomContext> {
     consumer
 }
 
-struct CustomContext;
-
 impl ClientContext for CustomContext {
-    fn error(&self, error: KafkaError, test: &str) {//&CustomContext, KafkaError, &str
+    fn error(&self, error: KafkaError, reason: &str) {
         error!("{}", error);
+        error!("{}", reason);
         std::process::exit(1)
     }
 }
 
 impl ConsumerContext for CustomContext {
     fn pre_rebalance(&self, rebalance: &Rebalance) {
-        info!("Pre rebalance {:?}", rebalance);
+        debug!("Pre rebalance {:?}", rebalance);
     }
 
     fn post_rebalance(&self, rebalance: &Rebalance) {
-        info!("Post rebalance {:?}", rebalance);
+        debug!("Post rebalance {:?}", rebalance);
     }
 
     fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
-        info!("Committing offsets: {:?}", result);
+        debug!("Committing offsets: {:?}", result);
     }
 }
