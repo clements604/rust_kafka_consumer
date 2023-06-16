@@ -23,7 +23,7 @@ struct CustomContext;
 async fn main() {
     let commit_consumed: bool;
 
-    Builder::new().filter_level(LevelFilter::Debug).init();
+    Builder::new().filter_level(LevelFilter::Info).init();
 
     let matches = App::new("kafka_consumer")
         .arg(

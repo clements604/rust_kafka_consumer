@@ -7,10 +7,20 @@ repository = "https://github.com/clements604/rust_kafka_consumer"
 description = "A simple Kafka consumer for development / debugging purposes"
 edition = "2021"
 
+[profile.dev]
+panic = "abort"
+codegen-units = 1
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+strip = true # remove symbols from binary
+opt-level = "s" # Optimize for size
+lto = true # Link time optimization
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-kafka = "0.9.0"
 env_logger = "0.10.0"
 serde = { version = "1.0.93", features = ["derive"] }
 serde_json = "1.0"
@@ -19,7 +29,6 @@ fs = "0.0.5"
 chrono = "0.4.24" # Utils
 clap = { version = "3.1.6", features = ["derive"] } #CLI Parser
 openssl = "0.10.50"
-
 rdkafka = { version = "0.24.0", features = ["cmake-build", "ssl"] }
 futures = "0.3.0"
 
