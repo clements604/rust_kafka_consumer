@@ -1,11 +1,11 @@
 [package]
 name = "kafka_consumer"
 version = "1.0.0"
+edition = "2021"
 authors = ["Joshua Clements"]
-license = "GNU GPLv3"
+license = "Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International"
 repository = "https://github.com/clements604/rust_kafka_consumer"
 description = "A simple Kafka consumer for development / debugging purposes"
-edition = "2021"
 
 [profile.dev]
 panic = "abort"
@@ -18,18 +18,15 @@ strip = true # remove symbols from binary
 opt-level = "s" # Optimize for size
 lto = true # Link time optimization
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 env_logger = "0.10.0"
-serde = { version = "1.0.93", features = ["derive"] }
-serde_json = "1.0"
 log = "0.4.17"
+serde = { version = "1.0.164", features = ["derive"] }
+serde_json = "1.0.97"
 fs = "0.0.5"
 chrono = "0.4.24" # Utils
 clap = { version = "3.1.6", features = ["derive"] } #CLI Parser
 openssl = "0.10.50"
 rdkafka = { version = "0.24.0", features = ["cmake-build", "ssl"] }
 futures = "0.3.0"
-
 tokio = { version = "1.18", features = ["full"] }
