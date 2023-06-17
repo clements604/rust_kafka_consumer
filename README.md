@@ -35,11 +35,17 @@
     {
       "AUTOCOMMIT_FLAG": false,
       "BOOTSTRAP_SERVERS": "localhost:9092",
-      "GROUP_ID": "group123",
-      "OFFSET_RESET_FLAG": "earliest",
+      "GROUP_ID": "josh",
+      "OFFSET": "earliest",
       "TOPICS": "quickstart-events",
       "MESSAGE_KEY": "",
-      "FILE_OUTPUT": false
+      "FILE_OUTPUT": false,
+      "SSL_ENABLED": false,
+      "SSL_SECURITY_PROTOCOL": "ssl",
+      "SSL_CA_LOCATION": "",
+      "SSL_CERT_LOCATION": "",
+      "SSL_KEY_LOCATION": "",
+      "SSL_KEY_PASSWD": ""
     }
 
 ### Dependencies
