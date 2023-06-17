@@ -241,6 +241,14 @@ fn get_rd_consumer(cfg_map: &serde_json::Value) -> BaseConsumer<CustomContext> {
     );
     consumer_config.set("session.timeout.ms", constants::CONNECTION_TIMEOUT_MS);
 
+    if cfg_map[constants::CFG_SSL_ENABLED].as_bool().unwrap_or(false) {
+        consumer_config.set("security.protocol", cfg_map[constants::CFG_SECURITY].as_str().expect("Missing security protocol"));
+        consumer_config.set("ssl.ca.location", &cfg_map[constants::CFG_CA_LOC].as_str().expect("Missing ca location"));
+        consumer_config.set("ssl.certificate.location", &cfg_map[constants::CFG_SSL_CERT_LOC].as_str().expect("Missing certificate password"));
+        consumer_config.set("ssl.key.location", &cfg_map[constants::CFG_SSL_KEY_LOC].as_str().expect("Missing ssl key location"));
+        consumer_config.set("ssl.key.password", &cfg_map[constants::CFG_SSL_KEY_PASSWD].as_str().expect("Missing ssl key password"));
+    }
+
     let consumer: BaseConsumer<CustomContext> = consumer_config
         .create_with_context(custom_context)
         .expect("Failed to create Kafka consumer");
